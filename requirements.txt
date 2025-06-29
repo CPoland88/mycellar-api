@@ -31,3 +31,4 @@ websockets==15.0.1
 openai==1.93.0
 openai==1.93.0
 python-dotenv==1.1.1
+python-multipart==0.0.20
