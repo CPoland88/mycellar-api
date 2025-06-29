@@ -29,3 +29,5 @@ uvloop==0.21.0
 watchfiles==1.1.0
 websockets==15.0.1
 openai==1.93.0
+openai==1.93.0
+python-dotenv==1.1.1

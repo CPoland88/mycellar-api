@@ -1,10 +1,12 @@
 from sqlmodel import Session, select
 from sqlalchemy import update
 from .db import engine
-from .models import Wine
-import requests, os, logging
+from .models import Wine, LabelTask
+import requests, os, logging, json
+from openai import OpenAI
 
-BARCODE_KEY = os.getenv("BARCODELOOKUP_KEY")    # set in Render later
+BARCODE_KEY = os.getenv("BARCODELOOKUP_KEY")    # set in Render
+client = OpenAI(api_key=os.getnenv("OPENAI_API_KEY"))
 
 def enrich_from_barcode(wine_id: int, barcode: str) -> None:
     """Fetch producer/label via BarcodeLookup and update the Wine row."""
@@ -32,3 +34,44 @@ def enrich_from_barcode(wine_id: int, barcode: str) -> None:
         wine.label = product.get("product_name") or wine.label
         s.add(wine)
         s.commit()
+
+def process_label(task_id: int, image_bytes: bytes, want_review: bool):
+    with Session(engine) as s:
+        task = s.get(LabelTask, task_id)
+        if not task:
+            logging.error("Task %s missing", task_id)
+            return
+        task.status = "processing"
+        s.add(task); s.commit()
+
+    # -- OpenAI Vision call here (simplified) --
+    response = client.chat.completions.create(
+        model="gpt-4o-vision",
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "image": image_bytes},
+                {"type": "text", "text":
+                    "Return JSON keys: producer, label, vintage, region."}
+            ]}],
+        max_tokens=400,
+    )
+    data = json.loads(response.choices[0].message.content)
+
+    # Optional quick review
+    if want_review:
+        review = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a sommelier."},
+                {"role": "user",
+                 "content": f"Give a 3-sentence overview of {data.get('producer')} {data.get('label')} {data.get('vintage')}."}
+            ]).choices[0].message.content
+        data["quick_review"] = review
+    
+    # Save result
+    with Session(engine) as s:
+        task = s.get(LabelTask, task_id)
+        task.status = "done"
+        task.payload = data
+        s.add(task); s.commit()

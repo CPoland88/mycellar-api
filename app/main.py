@@ -1,12 +1,12 @@
 # app/main.py
-from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
+from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException, UploadFile, File
 from sqlmodel import Session, select
 from dotenv import load_dotenv
 from typing import List
 from .db import init_db, get_session
-from .models import Wine, Bottle
+from .models import Wine, Bottle, LabelTask
 from .schemas import ScanIn
-from .tasks import enrich_from_barcode
+from .tasks import enrich_from_barcode, process_label
 
 # Load environment variables from .env file
 load_dotenv()
@@ -35,6 +35,7 @@ def get_wine_with_bottles(
     _ = wine.bottles
     return wine
 
+# POST /scan - add a bottle by barcode
 @app.post("/scan", status_code=202)
 def add_bottle(
     scan: ScanIn,
@@ -77,6 +78,39 @@ def add_bottle(
         "queued_enrichment": is_new
     }
 
+# POST /labels - upload an image for labeling
+@app.post("/labels", status_code=202)
+async def upload_label(
+    bg: BackgroundTasks,
+    want_review: bool = False,
+    image: UploadFile = File(...),
+    db: Session = Depends(get_session)
+):
+    # 1) Read the uploaded image into bytes
+    image_bytes = await image.read()
+
+    # 2) Create a LabelTask row
+    task = LabelTask(status="queued")
+    db.add(task)
+    db.commit()
+    db.refresh(task)    # gets task.id
+
+    # 3) Queue background processing
+    bg.add_task(process_label, task.id, image_bytes, want_review)
+
+    return {"task_id":task.id, "status": task.status}
+
+
+# GET /labels/{task_id} - check label task status
+@app.get("/labels/{task_id}")
+def get_label(task_id: int, db: Session = Depends(get_session)):
+    task = db.get(LabelTask, task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    return task
+
+
+# DELETE /wines/{wine_id} - delete a wine and all its bottles
 @app.delete("/wines/{wine_id}", status_code=204)
 def delete_wine(
     wine_id: int,

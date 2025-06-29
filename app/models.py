@@ -1,6 +1,6 @@
 from sqlmodel import Field, SQLModel, Relationship
-from datetime import date
-from typing import Optional, List
+from datetime import date, datetime
+from typing import Optional, List, Dict, Any
 from sqlalchemy import Column, JSON
 
 class Wine(SQLModel, table=True):
@@ -24,3 +24,9 @@ class Bottle(SQLModel, table=True):
     slot: str | None = Field(unique=True)
     
     wine: Wine = Relationship(back_populates="bottles")
+
+class LabelTask(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    status: str = "queued"          # queued -> processing -> done/failed)
+    payload: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
