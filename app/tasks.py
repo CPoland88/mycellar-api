@@ -6,7 +6,7 @@ import requests, os, logging, json
 from openai import OpenAI
 
 BARCODE_KEY = os.getenv("BARCODELOOKUP_KEY")    # set in Render
-client = OpenAI(api_key=os.getnenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def enrich_from_barcode(wine_id: int, barcode: str) -> None:
     """Fetch producer/label via BarcodeLookup and update the Wine row."""
