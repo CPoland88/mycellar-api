@@ -1,10 +1,14 @@
 # app/main.py
 from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
+from dotenv import load_dotenv
 from .db import init_db, get_session
 from .models import Wine, Bottle
 from .schemas import ScanIn
 from .tasks import enrich_from_barcode
+
+# Load environment variables from .env file
+load_dotenv()
 
 # existing FastAPI instance:
 app = FastAPI(title="CellarCore")

@@ -1,5 +1,9 @@
 from sqlmodel import SQLModel, create_engine, Session
+from dotenv import load_dotenv
 import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Pick engine based on env-var: Postgres in prod, SQLite in dev
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./cellar.db")
