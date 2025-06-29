@@ -5,7 +5,7 @@ from sqlalchemy import Column, JSON
 
 class Wine(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    producer: str
+    producer: str | None = None
     label: str | None = None
     vintage: int | None = None
     region: str | None = None
