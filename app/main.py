@@ -68,7 +68,7 @@ def add_bottle(
         "queued_enrichment": is_new
     }
 
-@app.delete("/wines/{wine_id}", statuse_code=204)
+@app.delete("/wines/{wine_id}", status_code=204)
 def delete_wine(
     wine_id: int,
     db: Session = Depends(get_session)
