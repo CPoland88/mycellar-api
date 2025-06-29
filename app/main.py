@@ -28,11 +28,13 @@ def add_bottle(
     bg: BackgroundTasks,
     db: Session = Depends(get_session)
 ):
+    barcode_str = str(scan.barcode)     # ensure barcode is a string
+
     # 1. find or create the Wine row (by barcode)
-    wine = db.exec(select(Wine).where(Wine.upc == scan.barcode)).first()
+    wine = db.exec(select(Wine).where(Wine.upc == barcode_str)).first()
     is_new = False
     if wine is None:
-        wine = Wine(upc=scan.barcode)   # placeholder, enrich later
+        wine = Wine(upc=barcode_str)   # placeholder, enrich later
         db.add(wine)
         is_new = True
         db.flush()                      # assigns wine.id
@@ -54,7 +56,7 @@ def add_bottle(
 
     #4. one-time enrichment for new barcodes
     if is_new:
-        bg.add_task(enrich_from_barcode, wine.id, scan.barcode)
+        bg.add_task(enrich_from_barcode, wine.id, barcode_str)
         
     return {
         "wine_id": wine.id,
