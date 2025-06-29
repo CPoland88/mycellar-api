@@ -82,16 +82,14 @@ def delete_wine(
     wine_id: int,
     db: Session = Depends(get_session)
 ):
-    # cascade: delete bottles first
-    count_bottle = db.exec(
-        select(Bottle).where(Bottle.wine_id == wine_id)
-    ).delete(synchronize_session=False)
-    
-    count_wine = db.exec(
-        select(Wine).where(Wine.id == wine_id)
-    ).delete(synchronize_session=False)
-
-    if count_wine == 0:
+    wine = db.get(Wine, wine_id)
+    if wine is None:
         raise HTTPException(404, f"Wine {wine_id} not found")
     
+    # delete all bottles tied to this wine
+    for b in wine.bottles:
+        db.delete(b)
+
+    # now delete the wine itself
+    db.delete(wine)
     db.commit()
