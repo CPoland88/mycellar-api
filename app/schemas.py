@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Union
 
 class ScanIn(BaseModel):
     barcode: Union[str, int] = Field(..., example="0081234567890")
