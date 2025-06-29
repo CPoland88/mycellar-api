@@ -2,6 +2,7 @@
 from fastapi import FastAPI, Depends, BackgroundTasks, HTTPException
 from sqlmodel import Session, select
 from dotenv import load_dotenv
+from typing import List
 from .db import init_db, get_session
 from .models import Wine, Bottle
 from .schemas import ScanIn
@@ -22,9 +23,17 @@ def health():
     return {"ok": True}
 
 # simple GET -> list wines
-@app.get("/wines")
-def list_wines(session: Session = Depends(get_session)):
-    return session.exec(select(Wine)).all()
+@app.get("/wines/{wine_id}", response_model=Wine)
+def get_wine_with_bottles(
+    wine_id: int,
+    db: Session = Depends(get_session)
+):
+    wine = db.exec(select(Wine).where(Wine.id == wine_id)).first()
+    if wine is None:
+        raise HTTPException(404, f"Wine {wine_id} not found")
+    # trigger lazy load of related bottles
+    _ = wine.bottles
+    return wine
 
 @app.post("/scan", status_code=202)
 def add_bottle(
