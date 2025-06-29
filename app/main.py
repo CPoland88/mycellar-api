@@ -67,3 +67,22 @@ def add_bottle(
         "bottle_id": bottle.id,
         "queued_enrichment": is_new
     }
+
+@app.delete("/wines/{wine_id}", statuse_code=204)
+def delete_wine(
+    wine_id: int,
+    db: Session = Depends(get_session)
+):
+    # cascade: delete bottles first
+    count_bottle = db.exec(
+        select(Bottle).where(Bottle.wine_id == wine_id)
+    ).delete(synchronize_session=False)
+    
+    count_wine = db.exec(
+        select(Wine).where(Wine.id == wine_id)
+    ).delete(synchronize_session=False)
+
+    if count_wine == 0:
+        raise HTTPException(404, f"Wine {wine_id} not found")
+    
+    db.commit()
